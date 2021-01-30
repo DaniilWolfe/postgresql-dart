@@ -47,6 +47,10 @@ class PostgreSQLFormat {
         return 'name';
       case PostgreSQLDataType.uuid:
         return 'uuid';
+      case PostgreSQLDataType.integerArray:
+        return 'int[]';
+      case PostgreSQLDataType.stringsArray:
+        return 'varchar[]';
     }
 
     return null;
@@ -65,8 +69,7 @@ class PostgreSQLFormat {
     while (iterator.moveNext()) {
       if (currentPtr == null) {
         if (iterator.current == _atSignCodeUnit) {
-          currentPtr =
-              PostgreSQLFormatToken(PostgreSQLFormatTokenType.variable);
+          currentPtr = PostgreSQLFormatToken(PostgreSQLFormatTokenType.variable);
           currentPtr.buffer.writeCharCode(iterator.current);
           items.add(currentPtr);
         } else {
@@ -76,8 +79,7 @@ class PostgreSQLFormat {
         }
       } else if (currentPtr.type == PostgreSQLFormatTokenType.text) {
         if (iterator.current == _atSignCodeUnit) {
-          currentPtr =
-              PostgreSQLFormatToken(PostgreSQLFormatTokenType.variable);
+          currentPtr = PostgreSQLFormatToken(PostgreSQLFormatTokenType.variable);
           currentPtr.buffer.writeCharCode(iterator.current);
           items.add(currentPtr);
         } else {
@@ -90,8 +92,7 @@ class PostgreSQLFormat {
             currentPtr.buffer.writeCharCode(iterator.current);
             currentPtr.type = PostgreSQLFormatTokenType.text;
           } else {
-            currentPtr =
-                PostgreSQLFormatToken(PostgreSQLFormatTokenType.variable);
+            currentPtr = PostgreSQLFormatToken(PostgreSQLFormatTokenType.variable);
             currentPtr.buffer.writeCharCode(iterator.current);
             items.add(currentPtr);
           }
@@ -143,8 +144,7 @@ class PostgreSQLFormat {
   static final int _colonCodeUnit = ':'.codeUnitAt(0);
 
   static bool _isIdentifier(int charCode) {
-    return (charCode >= _lowercaseACodeUnit &&
-            charCode <= _lowercaseZCodeUnit) ||
+    return (charCode >= _lowercaseACodeUnit && charCode <= _lowercaseZCodeUnit) ||
         (charCode >= _uppercaseACodeUnit && charCode <= _uppercaseZCodeUnit) ||
         (charCode >= _codeUnit0 && charCode <= _codeUnit9) ||
         (charCode == _underscoreCodeUnit) ||

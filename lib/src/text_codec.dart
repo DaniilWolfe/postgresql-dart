@@ -32,9 +32,27 @@ class PostgresTextEncoder {
       return _encodeJSON(value);
     }
 
+    if (value is List) {
+      return _encodeList(value, escapeStrings);
+    }
+
     // TODO: use custom type encoders
 
     throw PostgreSQLException("Could not infer type of value '$value'.");
+  }
+
+  String _encodeList(List value, bool escapeStrings) {
+    if (value.isEmpty) return '{}';
+    if (value.first is List) {
+      final lists = value.map((e) => _encodeList(e as List, escapeStrings)).join(',');
+      return '{$lists}';
+    } else if (value.first is int) {
+      return '{${value.join(',')}}';
+    } else if (value.first is String) {
+      final strings = value.map((e) => '"${_encodeString(e as String, escapeStrings)}"');
+      return '{${strings.join(',')}}';
+    }
+    throw UnimplementedError();
   }
 
   String _encodeString(String text, bool escapeStrings) {
@@ -121,8 +139,7 @@ class PostgresTextEncoder {
         final timezoneMinuteOffset = value.timeZoneOffset.inMinutes % 60;
 
         var hourComponent = timezoneHourOffset.abs().toString().padLeft(2, '0');
-        final minuteComponent =
-            timezoneMinuteOffset.abs().toString().padLeft(2, '0');
+        final minuteComponent = timezoneMinuteOffset.abs().toString().padLeft(2, '0');
 
         if (timezoneHourOffset >= 0) {
           hourComponent = '+$hourComponent';

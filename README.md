@@ -2,6 +2,13 @@
 
 [![Build Status](https://travis-ci.org/stablekernel/postgresql-dart.svg?branch=master)](https://travis-ci.org/stablekernel/postgresql-dart) [![codecov](https://codecov.io/gh/stablekernel/postgresql-dart/branch/master/graph/badge.svg)](https://codecov.io/gh/stablekernel/postgresql-dart)
 
+## Note:
+
+Adds support for PostgreSQL arrays. Currently only handles [int] and [String] 1 & 2-d arrays.
+**This fork is experimental and untested, use at your own risk.**
+
+## Original:
+
 A library for connecting to and querying PostgreSQL databases.
 
 This driver uses the more efficient and secure extended query format of the PostgreSQL protocol.
@@ -26,7 +33,7 @@ for (final row in results) {
   var a = row[0];
   var b = row[1];
 
-} 
+}
 ```
 
 Return rows as maps containing table and column names:

@@ -136,8 +136,7 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
         {
           if (value is DateTime) {
             final bd = ByteData(8);
-            bd.setInt64(
-                0, value.toUtc().difference(DateTime.utc(2000)).inMicroseconds);
+            bd.setInt64(0, value.toUtc().difference(DateTime.utc(2000)).inMicroseconds);
             return bd.buffer.asUint8List();
           }
           throw FormatException(
@@ -169,11 +168,8 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
                 'Invalid type for parameter value. Expected: String Got: ${value.runtimeType}');
           }
 
-          final hexBytes = (value as String)
-              .toLowerCase()
-              .codeUnits
-              .where((c) => c != _dashUnit)
-              .toList();
+          final hexBytes =
+              (value as String).toLowerCase().codeUnits.where((c) => c != _dashUnit).toList();
           if (hexBytes.length != 32) {
             throw FormatException(
                 "Invalid UUID string. There must be exactly 32 hexadecimal (0-9 and a-f) characters and any number of '-' characters.");
@@ -199,6 +195,11 @@ class PostgresBinaryEncoder extends Converter<dynamic, Uint8List> {
           }
           return outBuffer;
         }
+
+      case PostgreSQLDataType.integerArray:
+        throw UnimplementedError();
+      case PostgreSQLDataType.stringsArray:
+        throw UnimplementedError();
     }
 
     throw PostgreSQLException('Unsupported datatype');
@@ -218,8 +219,7 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
       return null;
     }
 
-    final buffer =
-        ByteData.view(value.buffer, value.offsetInBytes, value.lengthInBytes);
+    final buffer = ByteData.view(value.buffer, value.offsetInBytes, value.lengthInBytes);
 
     switch (dataType) {
       case PostgreSQLDataType.name:
@@ -241,17 +241,13 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
         return buffer.getFloat64(0);
       case PostgreSQLDataType.timestampWithoutTimezone:
       case PostgreSQLDataType.timestampWithTimezone:
-        return DateTime.utc(2000)
-            .add(Duration(microseconds: buffer.getInt64(0)));
-
+        return DateTime.utc(2000).add(Duration(microseconds: buffer.getInt64(0)));
       case PostgreSQLDataType.date:
         return DateTime.utc(2000).add(Duration(days: buffer.getInt32(0)));
-
       case PostgreSQLDataType.json:
         {
           // Removes version which is first character and currently always '1'
-          final bytes = value.buffer
-              .asUint8List(value.offsetInBytes + 1, value.lengthInBytes - 1);
+          final bytes = value.buffer.asUint8List(value.offsetInBytes + 1, value.lengthInBytes - 1);
           return json.decode(utf8.decode(bytes));
         }
 
@@ -276,6 +272,56 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
           }
 
           return buf.toString();
+        }
+
+      case PostgreSQLDataType.integerArray:
+        {
+          final array = List<int>.generate(
+            (value.length / 4).floor(),
+            (i) => buffer.getInt32(i * 4),
+          );
+          // 1-d array
+          if (array[0] == 1) {
+            return List<int>.generate(array[3], (i) => array[i * 2 + 6]);
+          }
+          // 2-d array
+          else if (array[0] == 2) {
+            return List<List<int>>.generate(
+              array[3],
+              (i) => List<int>.generate(array[5], (j) {
+                final number = array[8 + j * 2 + i * array[5] * 2];
+                return number;
+              }),
+            );
+          }
+          throw UnimplementedError();
+        }
+      case PostgreSQLDataType.stringsArray:
+        {
+          const kBits = 4;
+          final strings = <String>[];
+          final dimensions = buffer.getInt32(0);
+          if (dimensions > 2) throw UnimplementedError();
+          var index = kBits * (3 + dimensions * 2);
+          while (index < value.length) {
+            final stringLength = buffer.getInt32(index);
+            index += kBits;
+            final range = value.getRange(index, index + stringLength).toList();
+            strings.add(utf8.decode(range));
+            index += stringLength;
+          }
+          if (dimensions == 1) {
+            return strings;
+          } else if (dimensions == 2) {
+            return List.generate(
+              buffer.getInt32(kBits * 3),
+              (i) => List.generate(
+                buffer.getInt32(kBits * 5),
+                (j) => strings[i * 2 + j],
+              ),
+            );
+          }
+          throw UnimplementedError();
         }
     }
 
@@ -305,5 +351,8 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
     1184: PostgreSQLDataType.timestampWithTimezone,
     2950: PostgreSQLDataType.uuid,
     3802: PostgreSQLDataType.json,
+    // untested
+    1007: PostgreSQLDataType.integerArray,
+    1009: PostgreSQLDataType.stringsArray,
   };
 }
