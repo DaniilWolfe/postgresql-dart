@@ -313,11 +313,13 @@ class PostgresBinaryDecoder extends Converter<Uint8List, dynamic> {
           if (dimensions == 1) {
             return strings;
           } else if (dimensions == 2) {
+            final lengthOfFirstDimension = buffer.getInt32(kBits * 3);
+            final lengthOfSecondDimension = buffer.getInt32(kBits * 5);
             return List.generate(
-              buffer.getInt32(kBits * 3),
+              lengthOfFirstDimension,
               (i) => List.generate(
-                buffer.getInt32(kBits * 5),
-                (j) => strings[i * 2 + j],
+                lengthOfSecondDimension,
+                (j) => strings[i * lengthOfSecondDimension + j],
               ),
             );
           }
